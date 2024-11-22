@@ -19,7 +19,8 @@ DATASET_INFOS = {
         ["01", "02", "03"], 
         ["01", "03"], 
         ["02"]
-    ]
+    ],
+    'bis_crops':[['TSCTALURFL0368XBRXL16C05_dark_pink']]
 }
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]

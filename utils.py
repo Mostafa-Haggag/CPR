@@ -14,8 +14,13 @@ COLORS = np.array([0, 0, 0, 0.000, 0.447, 0.741, 0.850, 0.325, 0.098, 0.929, 0.6
 
 def save_dependencies_files(root_path):
     abs_cwd = os.path.abspath(os.getcwd())
+    # The line abs_cwd = os.path.abspath(os.getcwd()) gets the absolute path of the current working directory,
+    # which is used as a reference point for locating dependencies relative to the current project.
     # 获取当前加载的所有模块
     modules = list(sys.modules.values())
+    # modules = list(sys.modules.values()) retrieves a list of all currently loaded Python modules.
+    # This includes standard libraries, installed third-party packages, and any other libraries that
+    # are imported in the session.
     # 获取所有依赖的文件的路径
     dependency_files = []
     for module in modules:
@@ -27,6 +32,8 @@ def save_dependencies_files(root_path):
             # 忽略无法获取文件路径的模块
             continue
     dependency_files = list(set(dependency_files))
+    # dependency_files = list(set(dependency_files)) removes any duplicate
+    # file paths to ensure each dependency is only listed once.
     for file_path in dependency_files:
         save_path = os.path.join(root_path, os.path.relpath(file_path, abs_cwd))
         os.makedirs(os.path.dirname(save_path), exist_ok=True)

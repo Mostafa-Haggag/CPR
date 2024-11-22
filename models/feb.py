@@ -48,29 +48,59 @@ class ForegroundEstimateBranch(nn.Module):
 def get_feb(train_features) -> ForegroundEstimateBranch:
     """
     Get the foreground estimate branch.
-
+    This code defines the function get_feb that aims to estimate foreground features in a batch
+    of images using a combination of clustering (K-Means) and classification (Linear Discriminant Analysis).
     Args:
         train_features (torch.Tensor): The train features of shape (B, C, H, W), 
             where B is the batch size, C is the number of channels, H is the height, and W is the width.
     Returns:
         ForegroundEstimateBranch
     """
-    kmeans_f_num      = 50000
-    lda_f_num         = 15000
-    foreground_ratio  = 1/5
+    kmeans_f_num      = 50000 # kmeans_f_num = 50000: This specifies how many sample points (pixels) from the image will be used to train the K-Means algorithm.
+    lda_f_num         = 15000 # This defines how many foreground and background features will be used for training Linear Discriminant Analysis (LDA).
+    '''
+    oringal vlaues 
+        foreground_ratio  = 1/5
     background_ratio  = 3/80
-    background_id_num = 1
-    n_clusters        = 2
-    random_state      = np.random.RandomState(66)
+    '''
+    foreground_ratio  = 0.1 #  Specifies that the foreground is expected to occupy 10% of the image.
+    background_ratio  = 3/80 # pecifies that the background is expected to occupy 3/80ths of the image (about 3.75%).
+    background_id_num = 1 # This indicates the number of background IDs to use when defining the background mask.
+    n_clusters        = 2 # n_clusters = 2: This sets the number of clusters in the K-Means algorithm, which will divide the image pixels into two groups (likely foreground and background).
+    random_state      = np.random.RandomState(66) # A random number generator for reproducibility.
+    # these 2 functions are part of sci learn function
     lda               = LinearDiscriminantAnalysis()
     kmeans            = KMeans(n_clusters, n_init=10, random_state=random_state)
     normalizer        = FMinMaxScaler()
     # train_features: b x c x h x w
+    # you have 5330 ,256,80,80
     B, C, H, W = train_features.shape
     image_features = train_features.permute(0, 2, 3, 1).cpu().numpy()  # b x h x w x 512
+    # The function first gets the shape of the train_features tensor (B, C, H, W)
+    # and reshapes it from (B, C, H, W) to (B, H, W, C) for easier manipulation.
+        # It then converts this tensor into a NumPy array (image_features).
+    # you permute everything
+    # you reshape everything based on thec so you have huge vector by 512
+    # you have a set of H*W*B = 3392000
+    # you get from them kmeans_f_num
+    # you extract solo kmeans_f_num
+    # This code snippet applies K-Means clustering to the features extracted from an image and assigns each pixel in the image to a cluster.
     kmeans.fit(image_features.reshape(-1, C)[random_state.permutation(B*H*W)[:kmeans_f_num]])
+    # The code selects kmeans_f_num random pixels from the reshaped image_features and fits a K-Means model to these pixels.
+    # The K-Means model learns the cluster centroids based on the features in each pixel.
+    # you classify this pixel in chanel 0 is cloer to which cluster centroid
+    # the question in here when you use kmeans_f_num that means you are not taking along all the images but rather first
+    # set of images
+    # is this bad ?????
+
     image_codes = kmeans.predict(image_features.reshape(-1, C)).reshape(B, H, W)
+    # After the model is trained, it predicts the cluster assignment for each pixel in the image.
+    # The feature vectors for all pixels (image_features.reshape(-1, C)) are passed to the K-Means model, and it assigns each pixel to one of the kmeans_f_num clusters based on the learned centroids.
+    # you have predicted imagecode of size of (530,80,80)
+    # based on the 512 channel you used k mean to create some kind of clusters for each channels
+    # the cluster is based on the batch and based on size
     # background
+    # remember that H and W are 80 by 80
     background_mask = np.zeros((B, H, W), dtype=bool)
     background_mask[:, :int(background_ratio * H), :] = True
     background_mask[:, -int(background_ratio * H):, :] = True

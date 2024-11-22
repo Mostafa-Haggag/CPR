@@ -177,7 +177,7 @@ class CPR(nn.Module):
         ori_features = self.backbone(x)
         return self.lrb(ori_features), ori_features
 
-
+# This is model_info that by changing in it you can get something out of it
 MODEL_INFOS = {
     'DenseNet': {'layers': ['features.denseblock1', 'features.denseblock2'], 'cls': DenseNet, 'scales': [4, 8]},
     'EfficientNet': {'layers': ['features.2', 'features.3'], 'cls': EfficientNet, 'scales': [4, 8]},
