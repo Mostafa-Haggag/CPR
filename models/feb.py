@@ -5,15 +5,26 @@ import torch
 import torch.nn as nn
 
 class FMinMaxScaler:
+    # The FMinMaxScaler class is a custom implementation of a scaling technique,
+    # similar to scikit-learn's MinMaxScaler, with additional functionality to handle outlier robustness.
     def __init__(self, ratio=0.01):
+        # The goal is to scale data to a range of
+        # [0,1] while being robust to outliers by focusing on the central portion of the data and ignoring extreme values.
+        # This is achieved using a trimming ratio, specified as ratio, to exclude a small percentage of extreme data points before calculating the minimum and maximum values for scaling.
         self.ratio = ratio
         self.min = None
         self.max = None
+        # self.ratio: Specifies the proportion of extreme values to exclude from both ends of the data during fitting. For example, ratio=0.01 trims 1% of extreme data on each end.
+        # self.min: The minimum value after trimming outliers, used for scaling.
+        # self.max: The maximum value after trimming outliers, used for scaling.
         
     def fit(self, data):
+        # The np.partition function is used to find the thresholds for the lowest and highest values, excluding the specified ratio of outliers.
         m0 = np.partition(data, int(data.shape[0] * self.ratio), axis=0)[int(data.shape[0] * self.ratio)-1]
         m1 = np.partition(data, -int(data.shape[0] * self.ratio), axis=0)[-int(data.shape[0] * self.ratio)]
+        # For a ratio of 0.01, it identifies the values below which the lowest 1% of the data lies (m0) and above which the highest 1% of the data lies (m1).
         data = data[(data>=m0) & (data<=m1)]
+        # only the data points with the range m0 and m1 kept for scaling
         self.min = data.min(0).item()
         self.max = data.max(0).item()
         
@@ -22,6 +33,7 @@ class FMinMaxScaler:
         return self.transform(data)
     
     def transform(self, data):
+        # Normalizes all data points to a uniform range, which is crucial for many machine learning models to perform effectively.
         if isinstance(data, np.ndarray):
             data = np.clip(data, self.min, self.max)
         elif isinstance(data, torch.Tensor):
@@ -33,15 +45,27 @@ class FMinMaxScaler:
 class ForegroundEstimateBranch(nn.Module):
     def __init__(self, in_channels: int) -> None:
         super().__init__()
+        # This PyTorch module creates a neural network layer
+        # (Conv2d) and initializes its weights using pre-trained parameters (
+        # derived from LDA and a Min-Max scaler). The layer learns to predict whether
+        # each pixel in the input image belongs to the foreground
         self.conv1x1 = torch.nn.Conv2d(in_channels, 1, 1, 1).requires_grad_(False)
+        # Initializes a 1x1 convolution layer (Conv2d) with one output channel.
+        # .requires_grad_(False) freezes the layer parameters (useful for inference without training the layer).
     
     def initialize_weights(self, lda: LinearDiscriminantAnalysis, normalizer: FMinMaxScaler):
+        # Converts LDA weights and bias to PyTorch tensors and normalizes them using the provided FMinMaxScaler.
+        # These weights are assigned to the convolution layer.
         self.conv1x1.weight.data = torch.from_numpy(lda.coef_.T).float()[None, :, :, None] / torch.tensor(normalizer.max - normalizer.min).float()
+        # This scales the weights to match the normalized range of the features.
+        # The minimum value of the normalizer isn't subtracted because the weights themselves are directional multipliers (slopes), and subtracting the minimum would distort this directional property.
         self.conv1x1.bias.data = (torch.from_numpy(lda.intercept_).float() - torch.tensor(normalizer.min).float()) / torch.tensor(normalizer.max - normalizer.min).float()
+        # Subtracting the minimum ensures the bias aligns with the normalized input space. This step adjusts the intercept so that it matches the scale of the normalized data (where features are normalized to lie between 0 and 1).
         return self
     
     @torch.no_grad()
     def forward(self, x):
+        # Passes the input tensor x through the convolution layer and clamps its output between 0 and 1.
         return torch.clamp(self.conv1x1(x), 0, 1)
     
     
@@ -102,30 +126,49 @@ def get_feb(train_features) -> ForegroundEstimateBranch:
     # background
     # remember that H and W are 80 by 80
     background_mask = np.zeros((B, H, W), dtype=bool)
+    # Includes a border region:
+    # Top background_ratio * H rows.
+    # Bottom background_ratio * H rows.
+    # Left background_ratio * W columns.
+    # Right background_ratio * W columns.
     background_mask[:, :int(background_ratio * H), :] = True
     background_mask[:, -int(background_ratio * H):, :] = True
     background_mask[:, int(background_ratio * H):-int(background_ratio * H), :int(background_ratio * W)] = True
     background_mask[:, int(background_ratio * H):-int(background_ratio * H), -int(background_ratio * W):] = True
     # foreground
+    # Focuses on a central square region:
+    # Width and height defined as foreground_ratio of the image dimensions.
     foreground_mask = np.zeros((B, H, W), dtype=bool)
     foreground_mask[:, int(image_codes.shape[1] / 2 - image_codes.shape[1] * foreground_ratio):int(image_codes.shape[1] / 2 + image_codes.shape[1] * foreground_ratio),
                     int(image_codes.shape[2] / 2 - image_codes.shape[2] * foreground_ratio):int(image_codes.shape[2] / 2 + image_codes.shape[2] * foreground_ratio)] = True
     # background id
     background_ids = np.eye(kmeans.n_clusters)[image_codes[background_mask]].sum(0).argsort()[kmeans.n_clusters-background_id_num:]
-    
+    #### Mask Refinement:
+    # Determine which cluster IDs correspond to the background:
+    # Count cluster frequencies in the background mask.
+    # Take the most common cluster(s) as the background ID(s)
     # leave background id
     background_mask = background_mask & (np.stack([image_codes == background_id for background_id in background_ids]).sum(0) > 0)
 
     # remove background id
     foreground_mask = foreground_mask & (np.stack([image_codes != background_id for background_id in background_ids]).sum(0) >= len(background_ids))
-
+    # Refine masks to match cluster assignments:
+    # Background mask keeps only pixels belonging to the background cluster(s).
+    # Foreground mask excludes pixels in the background cluster(s).
     background_features = image_features[background_mask]
     foreground_features = image_features[foreground_mask]
-    
+
+    ### LDA Training
+    # Purpose: Train a classifier to separate foreground and background features.
     lda_f_num = min(lda_f_num, len(background_features), len(foreground_features))  # accelerate
+    # lda_f_num: Number of features to sample for LDA (e.g., 15,000).
     lda.fit(np.concatenate([
         background_features[random_state.permutation(len(background_features))[:lda_f_num]], 
         foreground_features[random_state.permutation(len(foreground_features))[:lda_f_num]]]), 
         np.concatenate([np.zeros((lda_f_num), dtype=int), np.ones((lda_f_num), dtype=int)]))
+    # Train LDA with:
+    # Background pixels labeled as 0.
+    # Foreground pixels labeled as 1.
+    # Sample features from the foreground and background masks.
     normalizer.fit(lda.decision_function(image_features.reshape(-1, C)))
     return ForegroundEstimateBranch(C).initialize_weights(lda, normalizer)
