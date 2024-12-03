@@ -25,25 +25,25 @@ def get_args_parser():
     parser.add_argument("--num-workers", type=int, default=8, help="num workers")
     parser.add_argument("-lp", "--log-path", type=str, default=None, help="log path")
     # data
-    parser.add_argument("-dn", "--dataset-name", type=str, default="mvtec", choices=["mvtec", "mvtec_3d", "btad"], help="dataset name")
+    parser.add_argument("-dn", "--dataset-name", type=str, default="bis_crops", choices=["mvtec", "mvtec_3d", "btad",'bis_crops'], help="dataset name")
     parser.add_argument("-ss", "--scales", type=int, nargs="+", help="multiscale", default=[4, 8])
     parser.add_argument("-kn", "--k-nearest", type=int, default=10, help="k nearest")
     parser.add_argument("-na", "--n-anomaly", type=int, default=0, help="n test anomaly samples")
     parser.add_argument("-r", "--resize", type=int, default=320, help="image resize")
-    parser.add_argument("-fd", "--foreground-dir", type=str, default=None, help="foreground dir")
-    parser.add_argument("-rd", "--retrieval-dir", type=str, default='log/retrieval_mvtec_DenseNet_features.denseblock1_320', help="retrieval dir")
-    parser.add_argument("-dd", "--data-dir", type=str, default='log/synthetic_mvtec_640_12000_True_jpg/', help="synthetic data dir")
+    parser.add_argument("-fd", "--foreground-dir", type=str, default='/media/mostafa/DATA2/GItRepo/CPR/tools/log/foreground_bis_crops_EfficientNet_features.2_320', help="foreground dir")
+    parser.add_argument("-rd", "--retrieval-dir", type=str, default='/media/mostafa/DATA2/GItRepo/CPR/tools/log/retrieval_bis_crops_EfficientNet_features.2_320/', help="retrieval dir")
+    parser.add_argument("-dd", "--data-dir", type=str, default='/media/mostafa/DATA2/GItRepo/CPR/tools/log/synthetic_bis_crops_640_4000_True_jpg', help="synthetic data dir")
     parser.add_argument("--sub-categories", type=str, nargs="+", default=None, help="sub categories", choices=list(chain(*[x[0] for x in list(DATASET_INFOS.values())])))
     # train
-    parser.add_argument("-bs", "--batch-size", type=int, default=32)
+    parser.add_argument("-bs", "--batch-size", type=int, default=4)
     parser.add_argument("-lr", "--learning-rate", type=float, default=1e-3)
-    parser.add_argument("--steps", type=int, default=40000)
+    parser.add_argument("--steps", type=int, default=1000)
     # test
-    parser.add_argument("-tps", "--test-per-steps", type=int, default=2000)
+    parser.add_argument("-tps", "--test-per-steps", type=int, default=200)
     parser.add_argument("-rs", "--region-sizes", type=int, nargs="+", help="local retrieval region size", default=[3, 1])
     parser.add_argument("--T", type=int, default=512)  # for image-level inference, DeSTSeg
     # model
-    parser.add_argument("-pm", "--pretrained-model", type=str, default='DenseNet', choices=list(MODEL_INFOS.keys()), help="pretrained model")
+    parser.add_argument("-pm", "--pretrained-model", type=str, default='EfficientNet', choices=list(MODEL_INFOS.keys()), help="pretrained model")
     return parser
 
 class ContrastiveLoss(nn.Module):

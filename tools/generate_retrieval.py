@@ -25,13 +25,13 @@ def gen_retrieval(save_path, dataset_name, model_name, layer, resize, knn, vis):
     logger.info(f'gen_retrieval')
     logger.info(f'save to {save_path}')
     logger.info(f'params: {dataset_name} {model_name} {layer} {resize} {knn} {vis}')
-    assert os.path.exists(os.path.join('./data', dataset_name)), f'{dataset_name} not exists'
+    assert os.path.exists(os.path.join('../data', dataset_name)), f'{dataset_name} not exists'
     dataset_info = DATASET_INFOS[dataset_name]
     for sub_category in dataset_info[0]:  # all
         fix_seeds(66)
         model: BaseModel = MODEL_INFOS[model_name]['cls']([layer], input_size=resize).to(device)
         model.eval()
-        root_dir = os.path.join('./data', dataset_name, sub_category)
+        root_dir = os.path.join('../data', dataset_name, sub_category)
         logger.info(f'generate {sub_category}')
         cur_target_save_path = os.path.join(save_path, sub_category)
         os.makedirs(cur_target_save_path, exist_ok=True)
@@ -97,14 +97,14 @@ if __name__ == "__main__":
     # run
     parser.add_argument("-lp", "--log-path", type=str, default=None, help="log path")
     # data
-    parser.add_argument("--dataset-name", type=str, default="mvtec", choices=["mvtec", "mvtec_3d", "btad"], help="dataset name")
+    parser.add_argument("--dataset-name", type=str, default="bis_crops", choices=["mvtec", "mvtec_3d", "btad",'bis_crops'], help="dataset name")
     parser.add_argument("--resize", type=int, default=320, help="image resize")
     # vis
-    parser.add_argument("--vis", action="store_true", help='save vis result')
+    parser.add_argument("--vis", action="store_false", help='save vis result')
     parser.add_argument("-k", "--k-nearest", type=int, default=10, help="k nearest")
     # model
-    parser.add_argument("-pm", "--pretrained-model", type=str, default='DenseNet', choices=list(MODEL_INFOS.keys()), help="pretrained model")
-    parser.add_argument("--layer", type=str, default='features.denseblock1', choices=list(chain(*[v['layers']for k, v in MODEL_INFOS.items()])), help=f'feature layer, ' + ", ".join([f"{k}: {v['layers']}" for k, v in MODEL_INFOS.items()]))
+    parser.add_argument("-pm", "--pretrained-model", type=str, default='EfficientNet', choices=list(MODEL_INFOS.keys()), help="pretrained model")
+    parser.add_argument("--layer", type=str, default='features.2', choices=list(chain(*[v['layers']for k, v in MODEL_INFOS.items()])), help=f'feature layer, ' + ", ".join([f"{k}: {v['layers']}" for k, v in MODEL_INFOS.items()]))
     args = parser.parse_args()
     # check
     if args.layer not in MODEL_INFOS[args.pretrained_model]['layers']:

@@ -142,19 +142,37 @@ def get_feb(train_features) -> ForegroundEstimateBranch:
     foreground_mask[:, int(image_codes.shape[1] / 2 - image_codes.shape[1] * foreground_ratio):int(image_codes.shape[1] / 2 + image_codes.shape[1] * foreground_ratio),
                     int(image_codes.shape[2] / 2 - image_codes.shape[2] * foreground_ratio):int(image_codes.shape[2] / 2 + image_codes.shape[2] * foreground_ratio)] = True
     # background id
+    # This is often used for one-hot encoding, where a numerical value is represented as a vector with all zeros except for a 1 at the index of the numerical value.
+    # image_codes is a 1D NumPy array with shape (489720,).
+        # background_mask is a Boolean array (or index array) of the same length as image_codes, used to select specific elements.
+    # # xtracts only the elements of image_codes where background_mask is True
+    # very smart way to idenify things
+    # Since the background_id_num is 1 in your example, it identifies the most frequent background cluster(s) in the background_mask as the background ID(s).
+    # In a complex scene, clusters may separately identify different areas of the background (e.g., sky, water, walls).
     background_ids = np.eye(kmeans.n_clusters)[image_codes[background_mask]].sum(0).argsort()[kmeans.n_clusters-background_id_num:]
+    # omputes the sum along the rows of the 2D array. you sum allong axi 0
+    # so you jhave (489720,2)
+    # you sum along so you get something else
+    #np.eye(kmeans.n_clusters)[image_codes[background_mask]].sum(0) give you array([139557., 350163.])
+    # argsort return the indices that sort an array
     #### Mask Refinement:
     # Determine which cluster IDs correspond to the background:
     # Count cluster frequencies in the background mask.
     # Take the most common cluster(s) as the background ID(s)
     # leave background id
+    # background mask has shape of (530, 80, 80)
+    # you and it with place where images_codes have also the same background id
     background_mask = background_mask & (np.stack([image_codes == background_id for background_id in background_ids]).sum(0) > 0)
+    # you got the write background id and accordingly you got what you want !
 
     # remove background id
     foreground_mask = foreground_mask & (np.stack([image_codes != background_id for background_id in background_ids]).sum(0) >= len(background_ids))
     # Refine masks to match cluster assignments:
     # Background mask keeps only pixels belonging to the background cluster(s).
     # Foreground mask excludes pixels in the background cluster(s).
+    # This step ensures:
+    # Pixels labeled as foreground are not part of any background cluster.
+    # Foreground is refined to exclude regions dominated by background.
     background_features = image_features[background_mask]
     foreground_features = image_features[foreground_mask]
 
@@ -171,4 +189,5 @@ def get_feb(train_features) -> ForegroundEstimateBranch:
     # Foreground pixels labeled as 1.
     # Sample features from the foreground and background masks.
     normalizer.fit(lda.decision_function(image_features.reshape(-1, C)))
+    # C is the 530 that you already have
     return ForegroundEstimateBranch(C).initialize_weights(lda, normalizer)

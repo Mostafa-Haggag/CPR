@@ -23,6 +23,9 @@ class Codebook(nn.Module):
 
 
 class BlockWiseHistogramEncoder(nn.Module):
+    # a PyTorch neural network module BlockWiseHistogramEncoder.
+    # Its primary function is to divide an input tensor (likely an image) into non-overlapping blocks,
+    # calculate histograms of cluster IDs within each block, and output these histograms.
     def __init__(self, S: int, input_size: int, n_clusters: int) -> None:
         super().__init__()
         self.n_clusters = n_clusters

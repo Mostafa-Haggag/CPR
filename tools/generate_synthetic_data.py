@@ -105,7 +105,7 @@ def generate_synthetic_anomaly_img(img, is_object, foreground_weight):
     # step 2. generate texture or structure anomaly
     ## anomaly source
     if np.random.uniform() < 0.5 or not is_object:
-        anomaly_source_img = read_image(random.choice(sorted(glob(os.path.join('./data/dtd/images', '*/*')))), (resize, resize)).astype(np.float32)
+        anomaly_source_img = read_image(random.choice(sorted(glob(os.path.join('../data/dtd/images', '*/*')))), (resize, resize)).astype(np.float32)
     else:
         anomaly_source_img = structure_source_img(img)
     ## mask anomaly parts
@@ -136,10 +136,10 @@ def generate(num_workers, save_path, dataset_name, resize, num, foreground_dir: 
     logger.info(f'gen_simulated_anomaly')
     logger.info(f'save to {save_path}')
     logger.info(f'params: {num_workers} {dataset_name} {resize} {num} {foreground_dir}')
-    data_root = os.path.join('./data', dataset_name)
+    data_root = os.path.join('../data', dataset_name)
     dataset_info = DATASET_INFOS[dataset_name]
     for sub_category_id, sub_category in enumerate(dataset_info[0]):  # all
-        is_object = sub_category in dataset_info[1]
+        is_object = sub_category in dataset_info[0]
         logger.info(f'processing {sub_category}')
         sub_category_save_path = os.path.join(save_path, sub_category)
         os.makedirs(sub_category_save_path, exist_ok=True)
@@ -162,10 +162,10 @@ if __name__ == "__main__":
     parser.add_argument("--num-workers", type=int, default=min(32, os.cpu_count()), help="num workers")
     parser.add_argument("-lp", "--log-path", type=str, default=None, help="log path")
     # data
-    parser.add_argument("--dataset-name", type=str, default="mvtec", choices=list(DATASET_INFOS.keys()), help="dataset name")
+    parser.add_argument("--dataset-name", type=str, default="bis_crops", choices=list(DATASET_INFOS.keys()), help="dataset name")
     parser.add_argument("--resize", type=int, default=640, help="image resize")
-    parser.add_argument("--num", type=int, default=12000, help="num of synthetic samples")
-    parser.add_argument("-fd", "--foreground-dir", type=str, default=None, help="foreground dir")
+    parser.add_argument("--num", type=int, default=4000, help="num of synthetic samples")
+    parser.add_argument("-fd", "--foreground-dir", type=str, default='/media/mostafa/DATA2/GItRepo/CPR/tools/log/foreground_bis_crops_EfficientNet_features.2_320/', help="foreground dir")
     args = parser.parse_args()
     if args.log_path is None:
         args.log_path = f'log/synthetic_{args.dataset_name}_{args.resize}_{args.num}_{args.foreground_dir is not None}_{save_format}'

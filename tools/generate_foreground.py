@@ -72,13 +72,13 @@ def gen_foreground(save_path, dataset_name, model_name, layer, resize, vis):
             feature = model(image_t[None].to(device))[0]
             foreground = feb(feature)[0, 0].cpu().numpy()
             # save
-            cur_save_dir = os.path.dirname(os.path.join(cur_target_save_path, k))
+            cur_save_dir = os.path.dirname(str(os.path.join(str(cur_target_save_path), k)))
             os.makedirs(cur_save_dir, exist_ok=True)
             cur_image_name = os.path.basename(k).split('.', 1)[0]
             if vis:
                 cv.imwrite(os.path.join(cur_save_dir, f'f_{cur_image_name}.png'), (foreground*255.).astype(np.uint8))
             np.save(os.path.join(cur_save_dir, f'f_{cur_image_name}.npy'), foreground)
-        torch.save(feb, os.path.join(cur_target_save_path, f'feb.pth'))
+        torch.save(feb, os.path.join(str(cur_target_save_path), f'feb.pth'))
             
 
 if __name__ == "__main__":
@@ -91,9 +91,9 @@ if __name__ == "__main__":
     # vis
     parser.add_argument("--vis", action="store_false", help='save vis result')
     # model
-    parser.add_argument("-pm", "--pretrained-model", type=str, default='DenseNet', choices=list(MODEL_INFOS.keys()), help="pretrained model")
+    parser.add_argument("-pm", "--pretrained-model", type=str, default='EfficientNet', choices=list(MODEL_INFOS.keys()), help="pretrained model")
     # perfect ! This is the missing part
-    parser.add_argument("--layer", type=str, default='features.denseblock1', choices=list(chain(*[v['layers']for k, v in MODEL_INFOS.items()])), help=f'feature layer, ' + ", ".join([f"{k}: {v['layers']}" for k, v in MODEL_INFOS.items()]))
+    parser.add_argument("--layer", type=str, default='features.2', choices=list(chain(*[v['layers']for k, v in MODEL_INFOS.items()])), help=f'feature layer, ' + ", ".join([f"{k}: {v['layers']}" for k, v in MODEL_INFOS.items()]))
     args = parser.parse_args()
     # check if the layer you recommended into their, please make a n error
     if args.layer not in MODEL_INFOS[args.pretrained_model]['layers']:

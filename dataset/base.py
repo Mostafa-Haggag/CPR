@@ -21,7 +21,7 @@ class CPRDataset(Dataset):
     def __init__(self, dataset_name: str, sub_category: str, resize: int, data_dir: str, scales: List[int], region_sizes: List[int], retrieval_dir: str, foreground_dir: str = None, nAnomaly: int = 0, knn: int = 10) -> None:
         self.dataset_name             = dataset_name
         self.sub_category             = sub_category
-        self.is_object                = sub_category in DATASET_INFOS[self.dataset_name][1]
+        self.is_object                = sub_category in DATASET_INFOS[self.dataset_name][0]
         self.resize                   = resize
         self.data_dir                 = data_dir
         self.foreground_dir           = foreground_dir
